@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <Servo.h>
 #include <DHT.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -7,10 +6,10 @@
 
 #if CONFIG_FREE_RTOS_UNICORE
 static const BaseType_t app_cpu = 0;
+
 #else
 static const BaseType_t app_cpu = 1;
 #endif
-
 #define DHTPIN 36 // Pin where DHT22 is connected
 #define PITCHER_SERVO_PIN 23
 #define ARMYAW_SERVO_PIN 1
@@ -28,7 +27,16 @@ static const BaseType_t app_cpu = 1;
 DHT dht(DHTPIN, DHTTYPE);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-Servo pincherServo, armYawServo, armExtensionServo, armHeightServo, cameraYawServo;
+/* Setting PWM properties */
+const int PWMFreq = 50;
+const int PWMChannelPincher = 0;
+const int PWMChannelArmYaw = 1;
+
+
+const int PWMResolution = 8;
+
+int servoPincherDutyCycle = 0;
+int armYawDutyCycle = 0;
 
 SemaphoreHandle_t xSerialMutex;
 QueueHandle_t inputDataQueue;
@@ -40,42 +48,17 @@ void controlServos(void *parameter)
   {
 
     String buffer;
-    if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)10) == pdPASS)
+    if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)0) == pdPASS)
     {
       Serial.println(buffer);
-      Serial.println("!!!");
-
-      // check for servo1 command
-      
-      pincherServo.attach(PITCHER_SERVO_PIN);
-      for (size_t i = 0; i < 5000; i++)
-      {
-      
-      pincherServo.write(90);
-      vTaskDelay(50 / portTICK_PERIOD_MS);
-      pincherServo.detach();
-
-      armYawServo.write(90);
-        /* code */
+      if(buffer.startsWith("servo1")) {
+        Serial.println(buffer.substring(7).toInt());
+        ledcWrite(PWMChannelPincher, buffer.substring(7).toInt());
+      } else if (buffer.startsWith("servo2")) {
+        ledcWrite(PWMChannelArmYaw, buffer.substring(7).toInt());
       }
-
-    
-  display.clearDisplay();
-  display.setRotation(180);
-
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 10);
-  // Display static text
-  display.println("xdddddddddddd");
-  display.display();
-
     }
-    else
-    {
-      Serial.println("error reading queue");
-    }
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
   }
 }
 
@@ -148,26 +131,21 @@ void readSerialData(void *parameter)
 {
   while (1)
   {
-    String s = "servo:90";
-    if (xQueueSend(inputDataQueue, (void *)&s, (TickType_t)10) == pdPASS)
+
+    if (Serial.available() > 0)
     {
-      Serial.print("ACK ");
-      //Serial.println(s);
+
+      String item = Serial.readStringUntil('\n');
+      if (xQueueSend(inputDataQueue, (void *)&item, (TickType_t)10) == pdPASS)
+      {
+        Serial.print("ACK ");
+        Serial.println(item);
+      }
+      else
+      {
+        Serial.println("Error sending in queue");
+      }
     }
-    //   if (Serial.available() > 0)
-    //   {
-    //     String item = Serial.readStringUntil('\n');
-    //     if (xQueueSend(inputDataQueue, (void *)&item, (TickType_t)10) == pdPASS)
-    //     {
-    //       Serial.print("ACK ");
-    //       Serial.println(item);
-    //     }
-    //     else
-    //     {
-    //       Serial.println("Error sending in queue");
-    //     }
-    //   }
-    // }
   }
 }
 
@@ -190,11 +168,15 @@ void readSerialData(void *parameter)
 void setup()
 {
   Serial.begin(115200);
-  pincherServo.attach(PITCHER_SERVO_PIN);
-  // armYawServo.attach(ARMYAW_SERVO_PIN);
-  // armExtensionServo.attach(ARMEXTENSION_SERVO_PIN);
-  armHeightServo.attach(ARMHEIGHT_SERVO_PIN);
-  cameraYawServo.attach(CAMERAYAW_SERVO_PIN);
+  ledcSetup(PWMChannelPincher, PWMFreq, PWMResolution);
+  ledcAttachPin(PITCHER_SERVO_PIN, PWMChannelPincher);
+
+  ledcSetup(PWMChannelArmYaw, PWMFreq, PWMResolution);
+  ledcAttachPin(0, PWMChannelArmYaw);
+
+  ledcWrite(PWMChannelPincher, servoPincherDutyCycle);
+  ledcWrite(PWMChannelArmYaw, armYawDutyCycle);
+  
   dht.begin();
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
@@ -216,8 +198,8 @@ void setup()
 
   xSerialMutex = xSemaphoreCreateMutex();
 
-  inputDataQueue = xQueueCreate(3, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
-  outputDataQueue = xQueueCreate(3, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
+  inputDataQueue = xQueueCreate(20, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
+  outputDataQueue = xQueueCreate(20, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
 
   xTaskCreatePinnedToCore(readSerialData, "Read serial", 4096, NULL, 1, NULL, app_cpu);
   //xTaskCreatePinnedToCore(sendSerialData, "Write serial", 4096, NULL, 5, NULL, app_cpu);
