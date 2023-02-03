@@ -21,25 +21,20 @@ void CustomServo::Setup(int servoPin, float servoDutyCycle, int pwmChannel)
 
 void CustomServo::ChangeDutyCycleLinear(float newDutyCycle)
 {
-  const float oldDutyCycle = this->servoDutyCycle;
-  const float dutyCycleIncrement = 0.01;
-
   if (this->servoDutyCycle < newDutyCycle)
   {
-    while (this->servoDutyCycle <= newDutyCycle)
+    for (float i = this->servoDutyCycle; i < newDutyCycle; i += 0.001)
     {
-      this->servoDutyCycle += dutyCycleIncrement;
-      ledcWrite(this->PWMChannel, servoDutyCycle);
-      vTaskDelay(20 / portTICK_PERIOD_MS);
+      ledcWrite(this->PWMChannel, i);
+      this->servoDutyCycle = i;
     }
   }
-  else
+  else if (this->servoDutyCycle > newDutyCycle)
   {
-    while (this->servoDutyCycle >= newDutyCycle)
+    for (float i = this->servoDutyCycle; i > newDutyCycle; i -= 0.001)
     {
-      this->servoDutyCycle -= dutyCycleIncrement;
-      ledcWrite(this->PWMChannel, servoDutyCycle);
-      vTaskDelay(20 / portTICK_PERIOD_MS);
+      ledcWrite(this->PWMChannel, i);
+      this->servoDutyCycle = i;
     }
   }
 }
