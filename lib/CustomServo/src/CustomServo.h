@@ -8,9 +8,12 @@ private:
   float servoDutyCycle;
   int servoPin;
 
+  float ConvertAngleToDutyCycle(float angle);
+
 public:
   CustomServo();
   ~CustomServo();
-  void ChangeDutyCycleLinear(float newDutyCycle);
+  void ChangeServoAngleLinear(float newDutyCycle);
+  void ChangeServoAngle(float newServoAngle);
   void Setup(int servoPin, float servoDutyCycle, int pwmChannel);
 };
