@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <CustomServo.h>
 
 #if CONFIG_FREE_RTOS_UNICORE
 static const BaseType_t app_cpu = 0;
@@ -11,7 +12,7 @@ static const BaseType_t app_cpu = 0;
 static const BaseType_t app_cpu = 1;
 #endif
 #define DHTPIN 36 // Pin where DHT22 is connected
-#define PITCHER_SERVO_PIN 23
+#define PINCHER_SERVO_PIN 23
 #define ARMYAW_SERVO_PIN 1
 #define ARMEXTENSION_SERVO_PIN 3
 #define ARMHEIGHT_SERVO_PIN 0
@@ -31,8 +32,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 const int PWMFreq = 50;
 const int PWMChannelPincher = 0;
 const int PWMChannelArmYaw = 1;
-
-
 const int PWMResolution = 8;
 
 int servoPincherDutyCycle = 0;
@@ -41,6 +40,8 @@ int armYawDutyCycle = 0;
 SemaphoreHandle_t xSerialMutex;
 QueueHandle_t inputDataQueue;
 QueueHandle_t outputDataQueue;
+
+CustomServo pincherServo;
 
 void controlServos(void *parameter)
 {
@@ -51,14 +52,12 @@ void controlServos(void *parameter)
     if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)0) == pdPASS)
     {
       Serial.println(buffer);
-      if(buffer.startsWith("servo1")) {
-        Serial.println(buffer.substring(7).toInt());
-        ledcWrite(PWMChannelPincher, buffer.substring(7).toInt());
-      } else if (buffer.startsWith("servo2")) {
-        ledcWrite(PWMChannelArmYaw, buffer.substring(7).toInt());
+      const float servoValue = buffer.substring(7).toFloat();
+      if (buffer.startsWith("servo1"))
+      {
+        pincherServo.ChangeDutyCycleLinear(servoValue);
       }
     }
-    vTaskDelay(50 / portTICK_PERIOD_MS);
   }
 }
 
@@ -168,15 +167,9 @@ void readSerialData(void *parameter)
 void setup()
 {
   Serial.begin(115200);
-  ledcSetup(PWMChannelPincher, PWMFreq, PWMResolution);
-  ledcAttachPin(PITCHER_SERVO_PIN, PWMChannelPincher);
 
-  ledcSetup(PWMChannelArmYaw, PWMFreq, PWMResolution);
-  ledcAttachPin(0, PWMChannelArmYaw);
+  pincherServo.Setup(PINCHER_SERVO_PIN, 0, 0);
 
-  ledcWrite(PWMChannelPincher, servoPincherDutyCycle);
-  ledcWrite(PWMChannelArmYaw, armYawDutyCycle);
-  
   dht.begin();
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
@@ -202,9 +195,9 @@ void setup()
   outputDataQueue = xQueueCreate(20, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
 
   xTaskCreatePinnedToCore(readSerialData, "Read serial", 4096, NULL, 1, NULL, app_cpu);
-  //xTaskCreatePinnedToCore(sendSerialData, "Write serial", 4096, NULL, 5, NULL, app_cpu);
+  // xTaskCreatePinnedToCore(sendSerialData, "Write serial", 4096, NULL, 5, NULL, app_cpu);
   xTaskCreatePinnedToCore(controlServos, "Control servos", 4096, NULL, 1, NULL, app_cpu);
-  //xTaskCreatePinnedToCore(controlServos, "Read temperature and humidity", 1024, NULL, 1, NULL, app_cpu);
+  // xTaskCreatePinnedToCore(controlServos, "Read temperature and humidity", 1024, NULL, 1, NULL, app_cpu);
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
