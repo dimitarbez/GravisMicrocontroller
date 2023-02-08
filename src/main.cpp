@@ -15,11 +15,6 @@ static const BaseType_t app_cpu = 0;
 static const BaseType_t app_cpu = 1;
 #endif
 #define DHTPIN 36 // Pin where DHT22 is connected
-#define PINCHER_SERVO_PIN 23
-#define ARMYAW_SERVO_PIN 1
-#define ARMEXTENSION_SERVO_PIN 3
-#define ARMHEIGHT_SERVO_PIN 0
-#define CAMERAYAW_SERVO_PIN 2
 
 #define DHTTYPE DHT22 // Type of DHT22 sensor
 
@@ -28,19 +23,25 @@ static const BaseType_t app_cpu = 1;
 
 #define MAX_QUEUE_ITEM_SIZE 50
 
+#define REAR_ENA 32
+#define REAR_ENB 14
+#define REAR_IN1 33
+#define REAR_IN2 25
+#define REAR_IN3 26
+#define REAR_IN4 27
+
+#define FRONT_ENA 19
+#define FRONT_ENB 4
+#define FRONT_IN1 18
+#define FRONT_IN2 5
+#define FRONT_IN3 17
+#define FRONT_IN4 16
+
 DHT dht(DHTPIN, DHTTYPE);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-L298N rearMotors(32, 33, 25, 14, 26, 27, 0);
-
-/* Setting PWM properties */
-const int PWMFreq = 50;
-const int PWMChannelPincher = 0;
-const int PWMChannelArmYaw = 1;
-const int PWMResolution = 8;
-
-int servoPincherDutyCycle = 0;
-int armYawDutyCycle = 0;
+L298N rearMotors(REAR_ENA, REAR_IN1, REAR_IN2, REAR_ENB, REAR_IN3, REAR_IN4, 0);
+L298N frontMotors(FRONT_ENA, FRONT_IN1, FRONT_IN2, FRONT_ENB, FRONT_IN3, FRONT_IN4, 0);
 
 SemaphoreHandle_t xSerialMutex;
 QueueHandle_t inputDataQueue;
@@ -48,19 +49,98 @@ QueueHandle_t outputDataQueue;
 
 CustomServo pincherServo;
 
-void controlServos(void *parameter)
+// void controlServos(void *parameter)
+// {
+//   while (1)
+//   {
+
+//     String buffer;
+//     if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)0) == pdPASS)
+//     {
+//       Serial.println(buffer);
+//       const float servoValue = buffer.substring(7).toFloat();
+//       if (buffer.startsWith("servo1"))
+//       {
+//         pincherServo.ChangeServoAngleLinear(servoValue);
+//       }
+//     }
+//   }
+// }
+
+void readDHTData(void *parameter)
 {
   while (1)
   {
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // Reading temperature or humidity takes about 250 milliseconds!
+    float h = dht.readHumidity();
+    // Read temperature as Celsius (the default)
+    float t = dht.readTemperature();
 
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(h) || isnan(t))
+    {
+      continue;
+    }
+
+    String humidity = "humidity:";
+    humidity = humidity.concat(h);
+
+    String temperature = "temperature:";
+    temperature = temperature.concat(t);
+
+    xQueueSend(outputDataQueue, (void *)&temperature, 10);
+    xQueueSend(outputDataQueue, (void *)&humidity, 0);
+  }
+}
+
+void controlMotors(void *parameter)
+{
+  while (1)
+  {
     String buffer;
-    if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)0) == pdPASS)
+    if (xQueuePeek(inputDataQueue, &buffer, (TickType_t)10) == pdTRUE)
     {
       Serial.println(buffer);
-      const float servoValue = buffer.substring(7).toFloat();
-      if (buffer.startsWith("servo1"))
+      if (buffer.startsWith("motor"))
       {
-        pincherServo.ChangeServoAngleLinear(servoValue);
+        if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)10) == pdTRUE)
+        {
+          int separatorIndex = buffer.indexOf(":");
+          String command = buffer.substring(separatorIndex + 1);
+          if (command == "forward")
+          {
+            rearMotors.moveForward();
+            frontMotors.moveForward();
+          }
+          else if (command == "backward")
+          {
+            rearMotors.moveBackward();
+            frontMotors.moveBackward();
+          }
+          else if (command == "left")
+          {
+            rearMotors.moveLeft();
+            frontMotors.moveLeft();
+          }
+          else if (command == "right")
+          {
+            rearMotors.moveRight();
+            frontMotors.moveRight();
+          }
+          else if (command == "stop")
+          {
+            rearMotors.stopMotors();
+            frontMotors.stopMotors();
+          }
+          else if (command.startsWith("speed"))
+          {
+            int separatorIndex = command.indexOf(":");
+            int speed = command.substring(separatorIndex + 1).toInt();
+            rearMotors.setSpeed(speed);
+            frontMotors.setSpeed(speed);
+          }
+        }
       }
     }
   }
@@ -88,6 +168,18 @@ void readSerialData(void *parameter)
   }
 }
 
+void writeSerialData(void *parameter)
+{
+  while (1)
+  {
+    String buffer;
+    if (xQueueReceive(outputDataQueue, &buffer, 10) == pdTRUE)
+    {
+      Serial.println(buffer);
+    }
+  }
+}
+
 void configure_uart_via_usb(void)
 {
   uart_config_t uart_config = {
@@ -95,8 +187,7 @@ void configure_uart_via_usb(void)
       .data_bits = UART_DATA_8_BITS,
       .parity = UART_PARITY_DISABLE,
       .stop_bits = UART_STOP_BITS_1,
-      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
-  };
+      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE};
   uart_param_config(UART_NUM_0, &uart_config);
   uart_driver_install(UART_NUM_0, 2048, 2048, 0, NULL, 0);
 
@@ -109,12 +200,8 @@ void configure_uart_via_usb(void)
 void setup()
 {
   void configure_uart_via_usb(void);
-  // pinMode(1, OUTPUT);
-  // pinMode(3, OUTPUT);
-  
-  Serial.begin(115200);
 
-  pincherServo.Setup(0, 50, 0);
+  Serial.begin(115200);
 
   xSerialMutex = xSemaphoreCreateMutex();
 
@@ -122,18 +209,9 @@ void setup()
   outputDataQueue = xQueueCreate(20, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
 
   xTaskCreatePinnedToCore(readSerialData, "Read serial", 4096, NULL, 1, NULL, app_cpu);
-  // xTaskCreatePinnedToCore(sendSerialData, "Write serial", 4096, NULL, 5, NULL, app_cpu);
-  xTaskCreatePinnedToCore(controlServos, "Control servos", 4096, NULL, 1, NULL, app_cpu);
-  // xTaskCreatePinnedToCore(controlServos, "Read temperature and humidity", 1024, NULL, 1, NULL, app_cpu);
-  pinMode(LED_BUILTIN, OUTPUT);
+  xTaskCreatePinnedToCore(writeSerialData, "Write serial", 4096, NULL, 1, NULL, app_cpu);
 
-  rearMotors.setSpeed(150);
-  rearMotors.moveForward();
-  delay(2000);
-  rearMotors.moveBackward();
-  delay(2000);
-  rearMotors.stopMotors();  
-
+  xTaskCreatePinnedToCore(controlMotors, "Control motors", 4096, NULL, 1, NULL, app_cpu);
 }
 
 void loop()
