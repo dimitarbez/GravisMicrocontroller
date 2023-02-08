@@ -6,6 +6,7 @@
 #include <CustomServo.h>
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include <L298N_ESP32.h>
 
 #if CONFIG_FREE_RTOS_UNICORE
 static const BaseType_t app_cpu = 0;
@@ -29,6 +30,8 @@ static const BaseType_t app_cpu = 1;
 
 DHT dht(DHTPIN, DHTTYPE);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+L298N rearMotors(32, 33, 25, 14, 26, 27, 0);
 
 /* Setting PWM properties */
 const int PWMFreq = 50;
@@ -123,6 +126,14 @@ void setup()
   xTaskCreatePinnedToCore(controlServos, "Control servos", 4096, NULL, 1, NULL, app_cpu);
   // xTaskCreatePinnedToCore(controlServos, "Read temperature and humidity", 1024, NULL, 1, NULL, app_cpu);
   pinMode(LED_BUILTIN, OUTPUT);
+
+  rearMotors.setSpeed(150);
+  rearMotors.moveForward();
+  delay(2000);
+  rearMotors.moveBackward();
+  delay(2000);
+  rearMotors.stopMotors();  
+
 }
 
 void loop()
