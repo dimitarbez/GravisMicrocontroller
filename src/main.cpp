@@ -4,6 +4,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <CustomServo.h>
+#include "driver/uart.h"
+#include "driver/gpio.h"
 
 #if CONFIG_FREE_RTOS_UNICORE
 static const BaseType_t app_cpu = 0;
@@ -55,7 +57,7 @@ void controlServos(void *parameter)
       const float servoValue = buffer.substring(7).toFloat();
       if (buffer.startsWith("servo1"))
       {
-        pincherServo.ChangeDutyCycleLinear(servoValue);
+        pincherServo.ChangeServoAngleLinear(servoValue);
       }
     }
   }
@@ -83,11 +85,33 @@ void readSerialData(void *parameter)
   }
 }
 
+void configure_uart_via_usb(void)
+{
+  uart_config_t uart_config = {
+      .baud_rate = 115200,
+      .data_bits = UART_DATA_8_BITS,
+      .parity = UART_PARITY_DISABLE,
+      .stop_bits = UART_STOP_BITS_1,
+      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+  };
+  uart_param_config(UART_NUM_0, &uart_config);
+  uart_driver_install(UART_NUM_0, 2048, 2048, 0, NULL, 0);
+
+  gpio_pad_select_gpio(GPIO_NUM_1);
+  gpio_pad_select_gpio(GPIO_NUM_3);
+  gpio_set_direction(GPIO_NUM_1, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_3, GPIO_MODE_OUTPUT);
+}
+
 void setup()
 {
+  void configure_uart_via_usb(void);
+  // pinMode(1, OUTPUT);
+  // pinMode(3, OUTPUT);
+  
   Serial.begin(115200);
 
-  pincherServo.Setup(0, 20, 0);
+  pincherServo.Setup(0, 50, 0);
 
   xSerialMutex = xSemaphoreCreateMutex();
 
