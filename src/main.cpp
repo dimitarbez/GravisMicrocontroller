@@ -210,8 +210,8 @@ void setup()
 
   xTaskCreatePinnedToCore(readSerialData, "Read serial", 4096, NULL, 1, NULL, app_cpu);
   xTaskCreatePinnedToCore(writeSerialData, "Write serial", 4096, NULL, 1, NULL, app_cpu);
-
-  xTaskCreatePinnedToCore(controlMotors, "Control motors", 4096, NULL, 1, NULL, app_cpu);
+  xTaskCreatePinnedToCore(readDHTData, "Read DHT data", 1024, NULL, 1, NULL, app_cpu);
+  xTaskCreatePinnedToCore(controlMotors, "Control motors", 1024, NULL, 1, NULL, app_cpu);
 }
 
 void loop()
