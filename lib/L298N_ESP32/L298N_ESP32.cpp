@@ -26,31 +26,31 @@ void L298N::moveForward()
 {
     digitalWrite(this->_in1, LOW);
     digitalWrite(this->_in2, HIGH);
-    digitalWrite(this->_in3, LOW);
-    digitalWrite(this->_in4, HIGH);
+    digitalWrite(this->_in3, HIGH);
+    digitalWrite(this->_in4, LOW);
 }
 
 void L298N::moveBackward()
 {
     digitalWrite(this->_in1, HIGH);
     digitalWrite(this->_in2, LOW);
-    digitalWrite(this->_in3, HIGH);
-    digitalWrite(this->_in4, LOW);
+    digitalWrite(this->_in3, LOW);
+    digitalWrite(this->_in4, HIGH);
 }
 
 void L298N::moveLeft()
 {
     digitalWrite(this->_in1, LOW);
-    digitalWrite(this->_in2, LOW);
-    digitalWrite(this->_in3, LOW);
-    digitalWrite(this->_in4, HIGH);
+    digitalWrite(this->_in2, HIGH);
+    digitalWrite(this->_in3, HIGH);
+    digitalWrite(this->_in4, LOW);
 }
 
 void L298N::moveRight()
 {
     digitalWrite(this->_in1, LOW);
-    digitalWrite(this->_in2, HIGH);
-    digitalWrite(this->_in3, LOW);
+    digitalWrite(this->_in2, LOW);
+    digitalWrite(this->_in3, HIGH);
     digitalWrite(this->_in4, LOW);
 }
 

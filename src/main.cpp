@@ -7,13 +7,14 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include <L298N_ESP32.h>
+#include <Adafruit_MPU6050.h>
 
 #if CONFIG_FREE_RTOS_UNICORE
 static const BaseType_t app_cpu = 0;
-
 #else
 static const BaseType_t app_cpu = 1;
 #endif
+
 #define DHTPIN 36 // Pin where DHT22 is connected
 
 #define DHTTYPE DHT22 // Type of DHT22 sensor
@@ -24,21 +25,23 @@ static const BaseType_t app_cpu = 1;
 #define MAX_QUEUE_ITEM_SIZE 50
 
 #define REAR_ENA 32
-#define REAR_ENB 14
 #define REAR_IN1 33
 #define REAR_IN2 25
 #define REAR_IN3 26
 #define REAR_IN4 27
+#define REAR_ENB 14
 
 #define FRONT_ENA 19
+#define FRONT_IN1 5
+#define FRONT_IN2 18
+#define FRONT_IN3 16
+#define FRONT_IN4 17
 #define FRONT_ENB 4
-#define FRONT_IN1 18
-#define FRONT_IN2 5
-#define FRONT_IN3 17
-#define FRONT_IN4 16
 
-DHT dht(DHTPIN, DHTTYPE);
+// DHT dht(DHTPIN, DHTTYPE);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Adafruit_MPU6050 mpu;
+sensors_event_t a, g, temp;
 
 L298N rearMotors(REAR_ENA, REAR_IN1, REAR_IN2, REAR_ENB, REAR_IN3, REAR_IN4, 0);
 L298N frontMotors(FRONT_ENA, FRONT_IN1, FRONT_IN2, FRONT_ENB, FRONT_IN3, FRONT_IN4, 0);
@@ -49,135 +52,27 @@ QueueHandle_t outputDataQueue;
 
 CustomServo pincherServo;
 
-// void controlServos(void *parameter)
-// {
-//   while (1)
-//   {
-
-//     String buffer;
-//     if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)0) == pdPASS)
-//     {
-//       Serial.println(buffer);
-//       const float servoValue = buffer.substring(7).toFloat();
-//       if (buffer.startsWith("servo1"))
-//       {
-//         pincherServo.ChangeServoAngleLinear(servoValue);
-//       }
-//     }
-//   }
-// }
-
-void readDHTData(void *parameter)
+void readIMUData(void *parameter)
 {
-  while (1)
-  {
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // Reading temperature or humidity takes about 250 milliseconds!
-    float h = dht.readHumidity();
-    // Read temperature as Celsius (the default)
-    float t = dht.readTemperature();
+  mpu.getEvent(&a, &g, &temp);
+  Serial.print("accel/x:");
+  Serial.print(a.acceleration.x);
+  Serial.print("/y:");
+  Serial.print(a.acceleration.y);
+  Serial.print("/z:");
+  Serial.println(a.acceleration.z);
 
-    // Check if any reads failed and exit early (to try again).
-    if (isnan(h) || isnan(t))
-    {
-      continue;
-    }
+  Serial.print("rotat/x:");
+  Serial.print(g.gyro.x);
+  Serial.print("/y:");
+  Serial.print(g.gyro.y);
+  Serial.print("/z:");
+  Serial.println(g.gyro.z);
 
-    String humidity = "humidity:";
-    humidity = humidity.concat(h);
+  Serial.print("temperature:");
+  Serial.print(temp.temperature);
 
-    String temperature = "temperature:";
-    temperature = temperature.concat(t);
-
-    xQueueSend(outputDataQueue, (void *)&temperature, 10);
-    xQueueSend(outputDataQueue, (void *)&humidity, 0);
-  }
-}
-
-void controlMotors(void *parameter)
-{
-  while (1)
-  {
-    String buffer;
-    if (xQueuePeek(inputDataQueue, &buffer, (TickType_t)10) == pdTRUE)
-    {
-      Serial.println(buffer);
-      if (buffer.startsWith("motor"))
-      {
-        if (xQueueReceive(inputDataQueue, &buffer, (TickType_t)10) == pdTRUE)
-        {
-          int separatorIndex = buffer.indexOf(":");
-          String command = buffer.substring(separatorIndex + 1);
-          if (command == "forward")
-          {
-            rearMotors.moveForward();
-            frontMotors.moveForward();
-          }
-          else if (command == "backward")
-          {
-            rearMotors.moveBackward();
-            frontMotors.moveBackward();
-          }
-          else if (command == "left")
-          {
-            rearMotors.moveLeft();
-            frontMotors.moveLeft();
-          }
-          else if (command == "right")
-          {
-            rearMotors.moveRight();
-            frontMotors.moveRight();
-          }
-          else if (command == "stop")
-          {
-            rearMotors.stopMotors();
-            frontMotors.stopMotors();
-          }
-          else if (command.startsWith("speed"))
-          {
-            int separatorIndex = command.indexOf(":");
-            int speed = command.substring(separatorIndex + 1).toInt();
-            rearMotors.setSpeed(speed);
-            frontMotors.setSpeed(speed);
-          }
-        }
-      }
-    }
-  }
-}
-
-void readSerialData(void *parameter)
-{
-  while (1)
-  {
-
-    if (Serial.available() > 0)
-    {
-
-      String item = Serial.readStringUntil('\n');
-      if (xQueueSend(inputDataQueue, (void *)&item, (TickType_t)10) == pdPASS)
-      {
-        Serial.print("ACK ");
-        Serial.println(item);
-      }
-      else
-      {
-        Serial.println("Error sending in queue");
-      }
-    }
-  }
-}
-
-void writeSerialData(void *parameter)
-{
-  while (1)
-  {
-    String buffer;
-    if (xQueueReceive(outputDataQueue, &buffer, 10) == pdTRUE)
-    {
-      Serial.println(buffer);
-    }
-  }
+  Serial.println("");
 }
 
 void configure_uart_via_usb(void)
@@ -199,21 +94,84 @@ void configure_uart_via_usb(void)
 
 void setup()
 {
-  void configure_uart_via_usb(void);
+  // void configure_uart_via_usb(void);
 
   Serial.begin(115200);
+  if (!mpu.begin())
+  {
+    Serial.println("Sensor init failed");
+  }
 
-  xSerialMutex = xSemaphoreCreateMutex();
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
 
-  inputDataQueue = xQueueCreate(20, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
-  outputDataQueue = xQueueCreate(20, sizeof(char[MAX_QUEUE_ITEM_SIZE]));
-
-  xTaskCreatePinnedToCore(readSerialData, "Read serial", 4096, NULL, 1, NULL, app_cpu);
-  xTaskCreatePinnedToCore(writeSerialData, "Write serial", 4096, NULL, 1, NULL, app_cpu);
-  xTaskCreatePinnedToCore(readDHTData, "Read DHT data", 1024, NULL, 1, NULL, app_cpu);
-  xTaskCreatePinnedToCore(controlMotors, "Control motors", 1024, NULL, 1, NULL, app_cpu);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ;
+  }
+  delay(2000);
+  display.clearDisplay();
+  display.display();
+  display.print("Gravis");
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setRotation(2);
+  display.setCursor(0, 16);
+  display.display();
+  display.startscrollright(0x00, 0x07);
 }
 
 void loop()
 {
+
+  if (Serial.available() > 0)
+  {
+    String buffer = Serial.readStringUntil('\n');
+    if (buffer.startsWith("motor"))
+    {
+      Serial.println("ACK MOTOR");
+      int separatorIndex = buffer.indexOf(":");
+      String command = buffer.substring(separatorIndex + 1);
+      Serial.println(command);
+      if (command == "forward")
+      {
+        Serial.println("RUN");
+        rearMotors.moveForward();
+        frontMotors.moveForward();
+      }
+      else if (command == "backward")
+      {
+        rearMotors.moveBackward();
+        frontMotors.moveBackward();
+      }
+      else if (command == "left")
+      {
+        rearMotors.moveLeft();
+        frontMotors.moveLeft();
+      }
+      else if (command == "right")
+      {
+        rearMotors.moveRight();
+        frontMotors.moveRight();
+      }
+      else if (command == "stop")
+      {
+        rearMotors.stopMotors();
+        frontMotors.stopMotors();
+      }
+      else if (command.startsWith("speed"))
+      {
+        int separatorIndex = command.indexOf(":");
+        int speed = command.substring(separatorIndex + 1).toInt();
+        Serial.println(speed);
+        rearMotors.setSpeed(speed);
+        frontMotors.setSpeed(speed);
+      }
+    }
+  }
+  // readIMUData(NULL);
+  //  delay(2000);
 }

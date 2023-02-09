@@ -24,5 +24,5 @@ private:
     int freq = 1000;
     int pwmChannel = 0;
     const int resolution = 8;
-    int dutyCycle = 0;
+    int dutyCycle = 120;
 };
