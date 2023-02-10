@@ -42,7 +42,7 @@ void L298N::moveLeft()
 {
     digitalWrite(this->_in1, LOW);
     digitalWrite(this->_in2, HIGH);
-    digitalWrite(this->_in3, HIGH);
+    digitalWrite(this->_in3, LOW);
     digitalWrite(this->_in4, LOW);
 }
 

@@ -99,33 +99,36 @@ void setup()
 
 void motorControl(String buffer)
 {
-  Serial.println("ACK MOTOR");
   int separatorIndex = buffer.indexOf(":");
   String command = buffer.substring(separatorIndex + 1);
   Serial.println(command);
   if (command == "forward")
   {
-    Serial.println("RUN");
+    Serial.println("ACK MOTOR");
     rearMotors.moveForward();
     frontMotors.moveForward();
   }
   else if (command == "backward")
   {
+    Serial.println("ACK MOTOR");
     rearMotors.moveBackward();
     frontMotors.moveBackward();
   }
   else if (command == "left")
   {
+    Serial.println("ACK MOTOR");
     rearMotors.moveLeft();
     frontMotors.moveLeft();
   }
   else if (command == "right")
   {
+    Serial.println("ACK MOTOR");
     rearMotors.moveRight();
     frontMotors.moveRight();
   }
   else if (command == "stop")
   {
+    Serial.println("ACK MOTOR");
     rearMotors.stopMotors();
     frontMotors.stopMotors();
   }
@@ -133,7 +136,7 @@ void motorControl(String buffer)
   {
     int separatorIndex = command.indexOf(":");
     int speed = command.substring(separatorIndex + 1).toInt();
-    Serial.println(speed);
+    Serial.println("ACK MOTOR");
     rearMotors.setSpeed(speed);
     frontMotors.setSpeed(speed);
   }
