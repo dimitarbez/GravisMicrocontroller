@@ -72,7 +72,7 @@ void servoControl(String buffer)
   int separatorIndex = buffer.indexOf(":");
   String command = buffer.substring(separatorIndex + 1);
 
-  int separatorIndex = command.indexOf(":");
+  separatorIndex = command.indexOf(":");
   float angle = command.substring(separatorIndex + 1).toInt();
 
   if (command == "pincher")
