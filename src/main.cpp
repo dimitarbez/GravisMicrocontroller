@@ -9,20 +9,12 @@
 #include <L298N_ESP32.h>
 #include <Adafruit_MPU6050.h>
 
-#if CONFIG_FREE_RTOS_UNICORE
-static const BaseType_t app_cpu = 0;
-#else
-static const BaseType_t app_cpu = 1;
-#endif
-
 #define DHTPIN 36 // Pin where DHT22 is connected
 
 #define DHTTYPE DHT22 // Type of DHT22 sensor
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
-
-#define MAX_QUEUE_ITEM_SIZE 50
 
 #define REAR_ENA 32
 #define REAR_IN1 33
@@ -75,27 +67,8 @@ void readIMUData(void *parameter)
   Serial.println("");
 }
 
-void configure_uart_via_usb(void)
-{
-  uart_config_t uart_config = {
-      .baud_rate = 115200,
-      .data_bits = UART_DATA_8_BITS,
-      .parity = UART_PARITY_DISABLE,
-      .stop_bits = UART_STOP_BITS_1,
-      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE};
-  uart_param_config(UART_NUM_0, &uart_config);
-  uart_driver_install(UART_NUM_0, 2048, 2048, 0, NULL, 0);
-
-  gpio_pad_select_gpio(GPIO_NUM_1);
-  gpio_pad_select_gpio(GPIO_NUM_3);
-  gpio_set_direction(GPIO_NUM_1, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_3, GPIO_MODE_OUTPUT);
-}
-
 void setup()
 {
-  // void configure_uart_via_usb(void);
-
   Serial.begin(115200);
   if (!mpu.begin())
   {
@@ -115,63 +88,66 @@ void setup()
   delay(2000);
   display.clearDisplay();
   display.display();
-  display.print("Gravis");
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setRotation(2);
   display.setCursor(0, 16);
+  display.print("Gravis");
   display.display();
   display.startscrollright(0x00, 0x07);
 }
 
+void motorControl(String buffer)
+{
+  Serial.println("ACK MOTOR");
+  int separatorIndex = buffer.indexOf(":");
+  String command = buffer.substring(separatorIndex + 1);
+  Serial.println(command);
+  if (command == "forward")
+  {
+    Serial.println("RUN");
+    rearMotors.moveForward();
+    frontMotors.moveForward();
+  }
+  else if (command == "backward")
+  {
+    rearMotors.moveBackward();
+    frontMotors.moveBackward();
+  }
+  else if (command == "left")
+  {
+    rearMotors.moveLeft();
+    frontMotors.moveLeft();
+  }
+  else if (command == "right")
+  {
+    rearMotors.moveRight();
+    frontMotors.moveRight();
+  }
+  else if (command == "stop")
+  {
+    rearMotors.stopMotors();
+    frontMotors.stopMotors();
+  }
+  else if (command.startsWith("speed"))
+  {
+    int separatorIndex = command.indexOf(":");
+    int speed = command.substring(separatorIndex + 1).toInt();
+    Serial.println(speed);
+    rearMotors.setSpeed(speed);
+    frontMotors.setSpeed(speed);
+  }
+}
+
 void loop()
 {
-
   if (Serial.available() > 0)
   {
     String buffer = Serial.readStringUntil('\n');
     if (buffer.startsWith("motor"))
     {
-      Serial.println("ACK MOTOR");
-      int separatorIndex = buffer.indexOf(":");
-      String command = buffer.substring(separatorIndex + 1);
-      Serial.println(command);
-      if (command == "forward")
-      {
-        Serial.println("RUN");
-        rearMotors.moveForward();
-        frontMotors.moveForward();
-      }
-      else if (command == "backward")
-      {
-        rearMotors.moveBackward();
-        frontMotors.moveBackward();
-      }
-      else if (command == "left")
-      {
-        rearMotors.moveLeft();
-        frontMotors.moveLeft();
-      }
-      else if (command == "right")
-      {
-        rearMotors.moveRight();
-        frontMotors.moveRight();
-      }
-      else if (command == "stop")
-      {
-        rearMotors.stopMotors();
-        frontMotors.stopMotors();
-      }
-      else if (command.startsWith("speed"))
-      {
-        int separatorIndex = command.indexOf(":");
-        int speed = command.substring(separatorIndex + 1).toInt();
-        Serial.println(speed);
-        rearMotors.setSpeed(speed);
-        frontMotors.setSpeed(speed);
-      }
+      motorControl(buffer);
     }
   }
-  // readIMUData(NULL);
-  //  delay(2000);
+  readIMUData(NULL);
 }
