@@ -42,7 +42,7 @@ SemaphoreHandle_t xSerialMutex;
 QueueHandle_t inputDataQueue;
 QueueHandle_t outputDataQueue;
 
-CustomServo pincherServo;
+CustomServo servo1, servo2, servo3, servo4;
 
 void readIMUData(void *parameter)
 {
@@ -67,34 +67,34 @@ void readIMUData(void *parameter)
   Serial.println("");
 }
 
-void setup()
+void servoControl(String buffer)
 {
-  Serial.begin(115200);
-  if (!mpu.begin())
+  int separatorIndex = buffer.indexOf(":");
+  String command = buffer.substring(separatorIndex + 1);
+
+  int separatorIndex = command.indexOf(":");
+  float angle = command.substring(separatorIndex + 1).toInt();
+
+  if (command == "pincher")
   {
-    Serial.println("Sensor init failed");
+    Serial.println("ACK SERVO");
+    servo1.ChangeServoAngle(angle);
   }
-
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
-
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  { // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ;
+  else if (command == "armyaw")
+  {
+    Serial.println("ACK SERVO");
+    servo2.ChangeServoAngle(angle);
   }
-  delay(2000);
-  display.clearDisplay();
-  display.display();
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setRotation(2);
-  display.setCursor(0, 16);
-  display.print("Gravis");
-  display.display();
-  display.startscrollright(0x00, 0x07);
+  else if (command == "armext")
+  {
+    Serial.println("ACK SERVO");
+    servo3.ChangeServoAngle(angle);
+  }
+  else if (command == "armheight")
+  {
+    Serial.println("ACK SERVO");
+    servo4.ChangeServoAngle(angle);
+  }
 }
 
 void motorControl(String buffer)
@@ -142,6 +142,41 @@ void motorControl(String buffer)
   }
 }
 
+void setup()
+{
+  Serial.begin(115200);
+  if (!mpu.begin())
+  {
+    Serial.println("Sensor init failed");
+  }
+
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ;
+  }
+  delay(2000);
+  display.clearDisplay();
+  display.display();
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setRotation(2);
+  display.setCursor(0, 16);
+  display.print("Gravis");
+  display.display();
+  display.startscrollright(0x00, 0x07);
+
+  servo1.Setup(23, 0, 0);
+  servo2.Setup(0, 0, 1);
+  servo3.Setup(2, 0, 2);
+  servo4.Setup(15, 0, 3);
+}
+
 void loop()
 {
   if (Serial.available() > 0)
@@ -150,6 +185,9 @@ void loop()
     if (buffer.startsWith("motor"))
     {
       motorControl(buffer);
+    }
+    else if (buffer.startsWith("servo")) {
+      servoControl(buffer);
     }
   }
   readIMUData(NULL);
