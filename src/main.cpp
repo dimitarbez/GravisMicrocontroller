@@ -7,7 +7,6 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include <L298N_ESP32.h>
-#include <Adafruit_MPU6050.h>
 
 #define DHTPIN 36 // Pin where DHT22 is connected
 
@@ -32,8 +31,6 @@
 
 // DHT dht(DHTPIN, DHTTYPE);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-Adafruit_MPU6050 mpu;
-sensors_event_t a, g, temp;
 
 L298N rearMotors(REAR_ENA, REAR_IN1, REAR_IN2, REAR_ENB, REAR_IN3, REAR_IN4, 0);
 L298N frontMotors(FRONT_ENA, FRONT_IN1, FRONT_IN2, FRONT_ENB, FRONT_IN3, FRONT_IN4, 0);
@@ -43,29 +40,6 @@ QueueHandle_t inputDataQueue;
 QueueHandle_t outputDataQueue;
 
 CustomServo servo1, servo2, servo3, servo4;
-
-void readIMUData(void *parameter)
-{
-  mpu.getEvent(&a, &g, &temp);
-  Serial.print("accel/x:");
-  Serial.print(a.acceleration.x);
-  Serial.print("/y:");
-  Serial.print(a.acceleration.y);
-  Serial.print("/z:");
-  Serial.println(a.acceleration.z);
-
-  Serial.print("rotat/x:");
-  Serial.print(g.gyro.x);
-  Serial.print("/y:");
-  Serial.print(g.gyro.y);
-  Serial.print("/z:");
-  Serial.println(g.gyro.z);
-
-  Serial.print("temperature:");
-  Serial.print(temp.temperature);
-
-  Serial.println("");
-}
 
 void servoControl(String buffer)
 {
@@ -150,14 +124,6 @@ void motorControl(String buffer)
 void setup()
 {
   Serial.begin(115200);
-  if (!mpu.begin())
-  {
-    Serial.println("Sensor init failed");
-  }
-
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   { // Address 0x3D for 128x64
@@ -167,11 +133,11 @@ void setup()
   }
   delay(2000);
   display.clearDisplay();
-  display.display();
-  display.setTextSize(2);
+  // display.display();
+  display.setTextSize(3);
   display.setTextColor(WHITE);
   display.setRotation(2);
-  display.setCursor(0, 16);
+  display.setCursor(0, 8);
   display.print("Gravis");
   display.display();
   display.startscrollright(0x00, 0x07);
@@ -195,5 +161,4 @@ void loop()
       servoControl(buffer);
     }
   }
-  readIMUData(NULL);
 }
