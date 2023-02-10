@@ -72,28 +72,33 @@ void servoControl(String buffer)
   int separatorIndex = buffer.indexOf(":");
   String command = buffer.substring(separatorIndex + 1);
 
+
   separatorIndex = command.indexOf(":");
-  float angle = command.substring(separatorIndex + 1).toInt();
+  float angle = command.substring(separatorIndex + 1).toFloat();
+  command = command.substring(0, separatorIndex);
+
+  Serial.println(command);
+  Serial.println(angle);
 
   if (command == "pincher")
   {
     Serial.println("ACK SERVO");
-    servo1.ChangeServoAngle(angle);
+    servo1.ChangeServoAngleLinear(angle);
   }
   else if (command == "armyaw")
   {
     Serial.println("ACK SERVO");
-    servo2.ChangeServoAngle(angle);
+    servo4.ChangeServoAngleLinear(angle);
   }
   else if (command == "armext")
   {
     Serial.println("ACK SERVO");
-    servo3.ChangeServoAngle(angle);
+    servo3.ChangeServoAngleLinear(angle);
   }
   else if (command == "armheight")
   {
     Serial.println("ACK SERVO");
-    servo4.ChangeServoAngle(angle);
+    servo2.ChangeServoAngleLinear(angle);
   }
 }
 
@@ -171,10 +176,10 @@ void setup()
   display.display();
   display.startscrollright(0x00, 0x07);
 
-  servo1.Setup(23, 0, 0);
-  servo2.Setup(0, 0, 1);
-  servo3.Setup(2, 0, 2);
-  servo4.Setup(15, 0, 3);
+  servo1.Setup(23, 90, 0);
+  servo2.Setup(0, 90, 1);
+  servo3.Setup(2, 90, 2);
+  servo4.Setup(15, 90, 3);
 }
 
 void loop()

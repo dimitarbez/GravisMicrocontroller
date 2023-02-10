@@ -27,18 +27,20 @@ void CustomServo::ChangeServoAngleLinear(float newServoAngle)
 
   if (this->servoDutyCycle < newDutyCycle)
   {
-    for (float i = this->servoDutyCycle; i < newDutyCycle; i += 0.01)
+    for (float i = this->servoDutyCycle; i < newDutyCycle; i += 0.0001)
     {
-      this->servoDutyCycle += dutyCycleIncrement;
-      ledcWrite(this->PWMChannel, servoDutyCycle);
+      this->servoDutyCycle = i;
+      ledcWrite(this->PWMChannel, i);
+      // delay(1);
     }
   }
   else if (this->servoDutyCycle > newDutyCycle)
   {
-    for (float i = this->servoDutyCycle; i > newDutyCycle; i -= 0.01)
+    for (float i = this->servoDutyCycle; i > newDutyCycle; i -= 0.0001)
     {
-      this->servoDutyCycle -= dutyCycleIncrement;
-      ledcWrite(this->PWMChannel, servoDutyCycle);
+      this->servoDutyCycle = i;
+      ledcWrite(this->PWMChannel, i);
+      // delay(1);
     }
   }
 }
