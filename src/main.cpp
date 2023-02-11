@@ -7,6 +7,13 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include <L298N_ESP32.h>
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+#include <avr/power.h>
+#endif
+
+#define LED_STRIP_FRONT_PIN 13
+#define LED_STRIP_BACK_PIN 12
 
 #define DHTPIN 36 // Pin where DHT22 is connected
 
@@ -41,11 +48,13 @@ QueueHandle_t outputDataQueue;
 
 CustomServo servo1, servo2, servo3, servo4;
 
+Adafruit_NeoPixel frontStrip = Adafruit_NeoPixel(20, LED_STRIP_FRONT_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel backStrip = Adafruit_NeoPixel(20, LED_STRIP_BACK_PIN, NEO_GRB + NEO_KHZ800);
+
 void servoControl(String buffer)
 {
   int separatorIndex = buffer.indexOf(":");
   String command = buffer.substring(separatorIndex + 1);
-
 
   separatorIndex = command.indexOf(":");
   float angle = command.substring(separatorIndex + 1).toFloat();
@@ -90,8 +99,8 @@ void motorControl(String buffer)
   else if (command == "backward")
   {
     Serial.println("ACK MOTOR");
-    rearMotors.moveBackward();
     frontMotors.moveBackward();
+    rearMotors.moveBackward();
   }
   else if (command == "left")
   {
@@ -121,6 +130,71 @@ void motorControl(String buffer)
   }
 }
 
+void setFrontStripColor(int r, int g, int b)
+{
+  for (size_t i = 0; i < frontStrip.numPixels(); i++)
+  {
+    frontStrip.setPixelColor(i, r, g, b);
+  }
+  frontStrip.setBrightness(255);
+  frontStrip.show();
+}
+
+void setBackStripColor(int r, int g, int b)
+{
+  for (size_t i = 0; i < frontStrip.numPixels(); i++)
+  {
+    backStrip.setPixelColor(i, r, g, b);
+  }
+  backStrip.setBrightness(255);
+  backStrip.show();
+}
+
+void lightControl(String buffer)
+{
+  int separatorIndex = buffer.indexOf(":");
+  String command = buffer.substring(separatorIndex + 1);
+  if (command.startsWith("front"))
+  {
+    separatorIndex = command.indexOf(":");
+    int r = command.substring(separatorIndex + 1).toInt();
+    command = command.substring(separatorIndex + 1);
+
+    separatorIndex = command.indexOf(":");
+    int g = command.substring(separatorIndex + 1).toInt();
+    command = command.substring(separatorIndex + 1);
+
+    separatorIndex = command.indexOf(":");
+    int b = command.substring(separatorIndex + 1).toInt();
+
+    setFrontStripColor(r, g, b);
+  }
+  else if (command == "back")
+  {
+    separatorIndex = command.indexOf(":");
+    int r = command.substring(separatorIndex + 1).toInt();
+    command = command.substring(separatorIndex + 1);
+
+    separatorIndex = command.indexOf(":");
+    int g = command.substring(separatorIndex + 1).toInt();
+    command = command.substring(separatorIndex + 1);
+
+    separatorIndex = command.indexOf(":");
+    int b = command.substring(separatorIndex + 1).toInt();
+
+    setBackStripColor(r, g, b);
+  }
+  else if (command == "off")
+  {
+    setFrontStripColor(0, 0, 0);
+    setBackStripColor(0, 0, 0);
+    frontStrip.setBrightness(0);
+    backStrip.setBrightness(0);
+    frontStrip.show();
+    backStrip.show();
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -146,6 +220,12 @@ void setup()
   servo2.Setup(0, 90, 1);
   servo3.Setup(2, 90, 2);
   servo4.Setup(15, 90, 3);
+
+  frontStrip.begin();
+  backStrip.begin();
+
+  frontStrip.show();
+  backStrip.show();
 }
 
 void loop()
@@ -157,8 +237,13 @@ void loop()
     {
       motorControl(buffer);
     }
-    else if (buffer.startsWith("servo")) {
+    else if (buffer.startsWith("servo"))
+    {
       servoControl(buffer);
+    }
+    else if (buffer.startsWith("lights")) 
+    {
+      lightControl(buffer);
     }
   }
 }
