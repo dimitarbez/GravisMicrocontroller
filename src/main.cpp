@@ -169,7 +169,7 @@ void lightControl(String buffer)
 
     setFrontStripColor(r, g, b);
   }
-  else if (command == "back")
+  else if (command.startsWith("back"))
   {
     separatorIndex = command.indexOf(":");
     int r = command.substring(separatorIndex + 1).toInt();
@@ -195,6 +195,22 @@ void lightControl(String buffer)
   }
 }
 
+void oledControl(String buffer)
+{
+  int separatorIndex = buffer.indexOf(":");
+  int secondSeparatorIndex = buffer.indexOf(":", separatorIndex + 1);
+  int size = buffer.substring(separatorIndex + 1, secondSeparatorIndex).toInt();
+  String text = buffer.substring(secondSeparatorIndex + 1);
+
+  display.clearDisplay();
+  display.setTextSize(size);
+  display.setTextColor(WHITE);
+  display.setRotation(2);
+  display.setCursor(0, 8);
+  display.print(text);
+  display.display();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -216,10 +232,10 @@ void setup()
   display.display();
   display.startscrollright(0x00, 0x07);
 
-  servo1.Setup(23, 90, 0);
-  servo2.Setup(0, 90, 1);
-  servo3.Setup(2, 90, 2);
-  servo4.Setup(15, 90, 3);
+  servo1.Setup(23, 90, 1);
+  servo2.Setup(0, 90, 2);
+  servo3.Setup(2, 90, 3);
+  servo4.Setup(15, 90, 4);
 
   frontStrip.begin();
   backStrip.begin();
@@ -241,9 +257,12 @@ void loop()
     {
       servoControl(buffer);
     }
-    else if (buffer.startsWith("lights")) 
+    else if (buffer.startsWith("lights"))
     {
       lightControl(buffer);
+    }
+    else if (buffer.startsWith("oled")) {
+      oledControl(buffer);
     }
   }
 }
