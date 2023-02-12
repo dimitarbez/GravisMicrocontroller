@@ -232,7 +232,7 @@ void setup()
   display.display();
   display.startscrollright(0x00, 0x07);
 
-  servo1.Setup(23, 90, 1);
+  servo1.Setup(23, 140, 1);
   servo2.Setup(0, 90, 2);
   servo3.Setup(2, 90, 3);
   servo4.Setup(15, 90, 4);
@@ -261,7 +261,8 @@ void loop()
     {
       lightControl(buffer);
     }
-    else if (buffer.startsWith("oled")) {
+    else if (buffer.startsWith("oled"))
+    {
       oledControl(buffer);
     }
   }
