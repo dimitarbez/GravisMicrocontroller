@@ -1,19 +1,21 @@
+#include <Arduino.h>
+#include <Servo.h>
+
 class CustomServo
 {
 private:
-  const int PWMFreq = 50;
-  const int PWMResolution = 8;
+  Servo servo; // Servo instance to control the servo motor
+  float servoAngle; // Current angle of the servo
+  int servoPin; // Pin number to which the servo is attachedprivate:
+  static const int SERVO_STEP_DELAY_MS = 15;
 
-  int PWMChannel;
-  float servoDutyCycle;
-  int servoPin;
-
-  float ConvertAngleToDutyCycle(float angle);
+  int ConvertAngleToPWM(float angle); // Convert a servo angle to PWM value
 
 public:
-  CustomServo();
-  ~CustomServo();
-  void ChangeServoAngleLinear(float newDutyCycle);
-  void ChangeServoAngle(float newServoAngle);
-  void Setup(int servoPin, float servoDutyCycle, int pwmChannel);
+  CustomServo(); // Constructor
+  ~CustomServo(); // Destructor
+
+  void Setup(int servoPin, float angle); // Set up the servo motor
+  void ChangeServoAngleLinear(float newServoAngle); // Change the servo angle with a linear motion
+  void ChangeServoAngle(float newServoAngle); // Immediately set the servo to a given angle
 };

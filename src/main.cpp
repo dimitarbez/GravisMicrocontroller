@@ -4,52 +4,40 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <CustomServo.h>
-#include "driver/uart.h"
-#include "driver/gpio.h"
-#include <L298N_ESP32.h>
+#include <L298N_ArduinoMega.h>
 #include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
-#include <avr/power.h>
-#endif
 
-#define LED_STRIP_FRONT_PIN 13
-#define LED_STRIP_BACK_PIN 12
+namespace Pins
+{
+  constexpr int LED_STRIP_FRONT = 8;
+  constexpr int LED_STRIP_BACK = 7;
+  constexpr int DHTPIN = 25;
 
-#define DHTPIN 36 // Pin where DHT22 is connected
+  constexpr int REAR_ENA = 29;
+  constexpr int REAR_IN1 = 31;
+  constexpr int REAR_IN2 = 33;
+  constexpr int REAR_IN3 = 35;
+  constexpr int REAR_IN4 = 37;
+  constexpr int REAR_ENB = 39;
 
-#define DHTTYPE DHT22 // Type of DHT22 sensor
+  constexpr int FRONT_ENA = 28;
+  constexpr int FRONT_IN1 = 30;
+  constexpr int FRONT_IN2 = 32;
+  constexpr int FRONT_IN3 = 34;
+  constexpr int FRONT_IN4 = 36;
+  constexpr int FRONT_ENB = 38;
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+  constexpr int CAM_YAW_SERVO = 2;
+  constexpr int CAM_PITCH_SERVO = 3;
+}
 
-#define REAR_ENA 32
-#define REAR_IN1 33
-#define REAR_IN2 25
-#define REAR_IN3 26
-#define REAR_IN4 27
-#define REAR_ENB 14
+L298N rearMotors(Pins::REAR_ENA, Pins::REAR_IN1, Pins::REAR_IN2, Pins::REAR_ENB, Pins::REAR_IN3, Pins::REAR_IN4);
+L298N frontMotors(Pins::FRONT_ENA, Pins::FRONT_IN1, Pins::FRONT_IN2, Pins::FRONT_ENB, Pins::FRONT_IN3, Pins::FRONT_IN4);
 
-#define FRONT_ENA 19
-#define FRONT_IN1 5
-#define FRONT_IN2 18
-#define FRONT_IN3 16
-#define FRONT_IN4 17
-#define FRONT_ENB 4
+CustomServo camPitchServo, camYawServo;
 
-// DHT dht(DHTPIN, DHTTYPE);
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-
-L298N rearMotors(REAR_ENA, REAR_IN1, REAR_IN2, REAR_ENB, REAR_IN3, REAR_IN4, 0);
-L298N frontMotors(FRONT_ENA, FRONT_IN1, FRONT_IN2, FRONT_ENB, FRONT_IN3, FRONT_IN4, 0);
-
-SemaphoreHandle_t xSerialMutex;
-QueueHandle_t inputDataQueue;
-QueueHandle_t outputDataQueue;
-
-CustomServo servo1, servo2, servo3, servo4;
-
-Adafruit_NeoPixel frontStrip = Adafruit_NeoPixel(20, LED_STRIP_FRONT_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel backStrip = Adafruit_NeoPixel(20, LED_STRIP_BACK_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel frontStrip = Adafruit_NeoPixel(20, Pins::LED_STRIP_FRONT, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel backStrip = Adafruit_NeoPixel(20, Pins::LED_STRIP_BACK, NEO_GRB + NEO_KHZ800);
 
 void servoControl(String buffer)
 {
@@ -63,25 +51,15 @@ void servoControl(String buffer)
   Serial.println(command);
   Serial.println(angle);
 
-  if (command == "pincher")
+  if (command == "campitch")
   {
     Serial.println("ACK SERVO");
-    servo1.ChangeServoAngleLinear(angle);
+    camPitchServo.ChangeServoAngleLinear(angle);
   }
-  else if (command == "armyaw")
+  else if (command == "camyaw")
   {
     Serial.println("ACK SERVO");
-    servo4.ChangeServoAngleLinear(angle);
-  }
-  else if (command == "armext")
-  {
-    Serial.println("ACK SERVO");
-    servo3.ChangeServoAngleLinear(angle);
-  }
-  else if (command == "armheight")
-  {
-    Serial.println("ACK SERVO");
-    servo2.ChangeServoAngleLinear(angle);
+    camYawServo.ChangeServoAngleLinear(angle);
   }
 }
 
@@ -150,38 +128,34 @@ void setBackStripColor(int r, int g, int b)
   backStrip.show();
 }
 
+void parseRGB(String &input, int &r, int &g, int &b)
+{
+  r = input.substring(0, input.indexOf(":")).toInt();
+  input.remove(0, input.indexOf(":") + 1);
+
+  g = input.substring(0, input.indexOf(":")).toInt();
+  input.remove(0, input.indexOf(":") + 1);
+
+  b = input.toInt();
+}
+
 void lightControl(String buffer)
 {
   int separatorIndex = buffer.indexOf(":");
   String command = buffer.substring(separatorIndex + 1);
+
   if (command.startsWith("front"))
   {
-    separatorIndex = command.indexOf(":");
-    int r = command.substring(separatorIndex + 1).toInt();
-    command = command.substring(separatorIndex + 1);
-
-    separatorIndex = command.indexOf(":");
-    int g = command.substring(separatorIndex + 1).toInt();
-    command = command.substring(separatorIndex + 1);
-
-    separatorIndex = command.indexOf(":");
-    int b = command.substring(separatorIndex + 1).toInt();
-
+    command.remove(0, command.indexOf(":") + 1);
+    int r, g, b;
+    parseRGB(command, r, g, b);
     setFrontStripColor(r, g, b);
   }
   else if (command.startsWith("back"))
   {
-    separatorIndex = command.indexOf(":");
-    int r = command.substring(separatorIndex + 1).toInt();
-    command = command.substring(separatorIndex + 1);
-
-    separatorIndex = command.indexOf(":");
-    int g = command.substring(separatorIndex + 1).toInt();
-    command = command.substring(separatorIndex + 1);
-
-    separatorIndex = command.indexOf(":");
-    int b = command.substring(separatorIndex + 1).toInt();
-
+    command.remove(0, command.indexOf(":") + 1);
+    int r, g, b;
+    parseRGB(command, r, g, b);
     setBackStripColor(r, g, b);
   }
   else if (command == "off")
@@ -195,47 +169,22 @@ void lightControl(String buffer)
   }
 }
 
-void oledControl(String buffer)
-{
-  int separatorIndex = buffer.indexOf(":");
-  int secondSeparatorIndex = buffer.indexOf(":", separatorIndex + 1);
-  int size = buffer.substring(separatorIndex + 1, secondSeparatorIndex).toInt();
-  String text = buffer.substring(secondSeparatorIndex + 1);
-
-  display.clearDisplay();
-  display.setTextSize(size);
-  display.setTextColor(WHITE);
-  display.setRotation(2);
-  display.setCursor(0, 8);
-  display.print(text);
-  display.display();
-}
-
 void setup()
 {
+  for (int i = 0; i < 5; i++)
+  {                                  // Blinking 10 times per second for 3 seconds
+    digitalWrite(LED_BUILTIN, HIGH); // Turn the LED on
+    delay(500);                       // Wait for 50ms
+    digitalWrite(LED_BUILTIN, LOW);  // Turn the LED off
+    delay(500);                       // Wait for 50ms
+  }
+
   Serial.begin(115200);
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  { // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ;
-  }
   delay(2000);
-  display.clearDisplay();
-  // display.display();
-  display.setTextSize(3);
-  display.setTextColor(WHITE);
-  display.setRotation(2);
-  display.setCursor(0, 8);
-  display.print("Gravis");
-  display.display();
-  display.startscrollright(0x00, 0x07);
 
-  servo1.Setup(23, 140, 1);
-  servo2.Setup(0, 90, 2);
-  servo3.Setup(2, 90, 3);
-  servo4.Setup(15, 90, 4);
+  camPitchServo.Setup(Pins::CAM_PITCH_SERVO, 90.0);
+  camYawServo.Setup(Pins::CAM_YAW_SERVO, 90.0);
 
   frontStrip.begin();
   backStrip.begin();
@@ -260,10 +209,6 @@ void loop()
     else if (buffer.startsWith("lights"))
     {
       lightControl(buffer);
-    }
-    else if (buffer.startsWith("oled"))
-    {
-      oledControl(buffer);
     }
   }
 }
