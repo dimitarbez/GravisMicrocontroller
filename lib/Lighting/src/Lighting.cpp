@@ -4,7 +4,8 @@ Lighting::Lighting(int frontStripPin, int backStripPin, int numOfPixels)
     : frontStrip(numOfPixels, frontStripPin, NEO_GRB + NEO_KHZ800),
       backStrip(numOfPixels, backStripPin, NEO_GRB + NEO_KHZ800),
       numOfPixels(numOfPixels),
-      currentState(NONE)
+      currentState(NONE),
+      blinkState(false)
 {
   frontStrip.begin();
   frontStrip.clear();
@@ -96,13 +97,62 @@ void Lighting::setState(State newState)
 
 void Lighting::update()
 {
+  static unsigned long previousMillis = 0; // stores the last time the LED was updated
+  const long interval = 500;               // interval at which to blink (milliseconds)
+
+  unsigned long currentMillis = millis();
+
   switch (currentState)
   {
   case BLINK_LEFT:
-    // Your logic to handle blink left animation
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis;
+      if (blinkState)
+      {
+        for (size_t i = 0; i < numOfPixels / 2; i++)
+        {
+          frontStrip.setPixelColor(i, 255, 255, 0); // yellow
+          backStrip.setPixelColor(i, 255, 255, 0);
+        }
+      }
+      else
+      {
+        for (size_t i = 0; i < numOfPixels / 2; i++)
+        {
+          frontStrip.setPixelColor(i, 0, 0, 0); // off
+          backStrip.setPixelColor(i, 0, 0, 0);
+        }
+      }
+      blinkState = !blinkState;
+      frontStrip.show();
+      backStrip.show();
+    }
     break;
   case BLINK_RIGHT:
-    // Your logic to handle blink right animation
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis;
+      if (blinkState)
+      {
+        for (size_t i = numOfPixels / 2; i < numOfPixels; i++)
+        {
+          frontStrip.setPixelColor(i, 255, 255, 0); // yellow
+          backStrip.setPixelColor(i, 255, 255, 0);
+        }
+      }
+      else
+      {
+        for (size_t i = numOfPixels / 2; i < numOfPixels; i++)
+        {
+          frontStrip.setPixelColor(i, 0, 0, 0); // off
+          backStrip.setPixelColor(i, 0, 0, 0);
+        }
+      }
+      blinkState = !blinkState;
+      frontStrip.show();
+      backStrip.show();
+    }
     break;
   case BLINK_ALL:
     // Your logic to handle blink all animation

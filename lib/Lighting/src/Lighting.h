@@ -18,6 +18,8 @@ private:
     uint32_t originalColorsBack[20];
     int numOfPixels;
     State currentState;  // added to keep track of current animation state
+    bool blinkState;
+
 
     void setStripColor(Adafruit_NeoPixel &strip, int r, int g, int b); // Added a generic function
     void parseRGB(String &input, int &r, int &g, int &b);
