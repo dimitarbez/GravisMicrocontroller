@@ -6,6 +6,7 @@
 #include <CustomServo.h>
 #include <L298N_ArduinoMega.h>
 #include <Adafruit_NeoPixel.h>
+#include <Lighting.h>
 
 namespace Pins
 {
@@ -39,6 +40,8 @@ CustomServo camPitchServo, camYawServo;
 Adafruit_NeoPixel frontStrip = Adafruit_NeoPixel(20, Pins::LED_STRIP_FRONT, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel backStrip = Adafruit_NeoPixel(20, Pins::LED_STRIP_BACK, NEO_GRB + NEO_KHZ800);
 
+Lighting lights = Lighting(Pins::LED_STRIP_FRONT, Pins::LED_STRIP_BACK);
+
 void servoControl(String buffer)
 {
   int separatorIndex = buffer.indexOf(":");
@@ -51,12 +54,12 @@ void servoControl(String buffer)
   Serial.println(command);
   Serial.println(angle);
 
-  if (command == "campitch")
+  if (command == "cam_pitch")
   {
     Serial.println("ACK SERVO");
     camPitchServo.ChangeServoAngleLinear(angle);
   }
-  else if (command == "camyaw")
+  else if (command == "cam_yaw")
   {
     Serial.println("ACK SERVO");
     camYawServo.ChangeServoAngleLinear(angle);
@@ -108,76 +111,8 @@ void motorControl(String buffer)
   }
 }
 
-void setFrontStripColor(int r, int g, int b)
-{
-  for (size_t i = 0; i < frontStrip.numPixels(); i++)
-  {
-    frontStrip.setPixelColor(i, r, g, b);
-  }
-  frontStrip.setBrightness(255);
-  frontStrip.show();
-}
-
-void setBackStripColor(int r, int g, int b)
-{
-  for (size_t i = 0; i < frontStrip.numPixels(); i++)
-  {
-    backStrip.setPixelColor(i, r, g, b);
-  }
-  backStrip.setBrightness(255);
-  backStrip.show();
-}
-
-void parseRGB(String &input, int &r, int &g, int &b)
-{
-  r = input.substring(0, input.indexOf(":")).toInt();
-  input.remove(0, input.indexOf(":") + 1);
-
-  g = input.substring(0, input.indexOf(":")).toInt();
-  input.remove(0, input.indexOf(":") + 1);
-
-  b = input.toInt();
-}
-
-void lightControl(String buffer)
-{
-  int separatorIndex = buffer.indexOf(":");
-  String command = buffer.substring(separatorIndex + 1);
-
-  if (command.startsWith("front"))
-  {
-    command.remove(0, command.indexOf(":") + 1);
-    int r, g, b;
-    parseRGB(command, r, g, b);
-    setFrontStripColor(r, g, b);
-  }
-  else if (command.startsWith("back"))
-  {
-    command.remove(0, command.indexOf(":") + 1);
-    int r, g, b;
-    parseRGB(command, r, g, b);
-    setBackStripColor(r, g, b);
-  }
-  else if (command == "off")
-  {
-    setFrontStripColor(0, 0, 0);
-    setBackStripColor(0, 0, 0);
-    frontStrip.setBrightness(0);
-    backStrip.setBrightness(0);
-    frontStrip.show();
-    backStrip.show();
-  }
-}
-
 void setup()
 {
-  for (int i = 0; i < 5; i++)
-  {                                  // Blinking 10 times per second for 3 seconds
-    digitalWrite(LED_BUILTIN, HIGH); // Turn the LED on
-    delay(500);                       // Wait for 50ms
-    digitalWrite(LED_BUILTIN, LOW);  // Turn the LED off
-    delay(500);                       // Wait for 50ms
-  }
 
   Serial.begin(115200);
 
@@ -208,7 +143,9 @@ void loop()
     }
     else if (buffer.startsWith("lights"))
     {
-      lightControl(buffer);
+      lights.control(buffer);
     }
   }
+
+  lights.update();
 }
