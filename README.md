@@ -118,8 +118,6 @@ Note: Be mindful of the serial buffer limits. If sending multiple commands in ra
 
 For detailed documentation, user manuals, and more information about the Gravis project, please visit the [Gravis Docs](https://dimitarbez.github.io/GravisDocs) page.
 
-Certainly! Here's the GPL v3 License section you can add to your README:
-
 ## License
 
 This project is licensed under the terms of the GNU General Public License v3.0 (GPL v3).
@@ -138,6 +136,3 @@ For the full license text, please refer to the [GPL v3 License](https://www.gnu.
 ## Contributors
 
 [Dimitar Bezhanovski](https://www.linkedin.com/in/dimitar-bezhanovski/)
---- 
-
-This completes the integration. If there are other sections or modifications needed, please let me know!
