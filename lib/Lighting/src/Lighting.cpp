@@ -41,13 +41,13 @@ void Lighting::parseRGB(String &input, int &r, int &g, int &b)
 void Lighting::saveOriginalColors()
 {
   // Save original colors for the front strip
-  for (size_t i = 0; i < 20; i++)
+  for (size_t i = 0; i < numOfPixels; i++)
   {
     originalColorsFront[i] = frontStrip.getPixelColor(i);
   }
 
   // Save original colors for the back strip
-  for (size_t i = 0; i < 20; i++)
+  for (size_t i = 0; i < numOfPixels; i++)
   {
     originalColorsBack[i] = backStrip.getPixelColor(i);
   }
@@ -56,13 +56,13 @@ void Lighting::saveOriginalColors()
 void Lighting::restoreOriginalColors()
 {
   // Restore original colors for the front strip
-  for (size_t i = 0; i < 20; i++)
+  for (size_t i = 0; i < numOfPixels; i++)
   {
     frontStrip.setPixelColor(i, originalColorsFront[i]);
   }
 
   // Restore original colors for the back strip
-  for (size_t i = 0; i < 20; i++)
+  for (size_t i = 0; i < numOfPixels; i++)
   {
     backStrip.setPixelColor(i, originalColorsBack[i]);
   }
