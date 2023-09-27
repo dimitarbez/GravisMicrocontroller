@@ -34,7 +34,7 @@ namespace Pins
   constexpr int CAM_PITCH_SERVO = 3;
 }
 
-L298N rearMotors(Pins::REAR_ENA, Pins::REAR_IN1, Pins::REAR_IN2, Pins::REAR_ENB, Pins::REAR_IN3, Pins::REAR_IN4);
+L298N rearMotors(Pins::REAR_ENB, Pins::REAR_IN2, Pins::REAR_IN1, Pins::REAR_ENA, Pins::REAR_IN4, Pins::REAR_IN3);
 L298N frontMotors(Pins::FRONT_ENA, Pins::FRONT_IN1, Pins::FRONT_IN2, Pins::FRONT_ENB, Pins::FRONT_IN3, Pins::FRONT_IN4);
 
 CustomServo camPitchServo, camYawServo;
