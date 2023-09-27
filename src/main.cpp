@@ -37,9 +37,6 @@ L298N frontMotors(Pins::FRONT_ENA, Pins::FRONT_IN1, Pins::FRONT_IN2, Pins::FRONT
 
 CustomServo camPitchServo, camYawServo;
 
-Adafruit_NeoPixel frontStrip = Adafruit_NeoPixel(20, Pins::LED_STRIP_FRONT, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel backStrip = Adafruit_NeoPixel(20, Pins::LED_STRIP_BACK, NEO_GRB + NEO_KHZ800);
-
 Lighting lights = Lighting(Pins::LED_STRIP_FRONT, Pins::LED_STRIP_BACK);
 
 void servoControl(String buffer)
@@ -121,11 +118,7 @@ void setup()
   camPitchServo.Setup(Pins::CAM_PITCH_SERVO, 90.0);
   camYawServo.Setup(Pins::CAM_YAW_SERVO, 90.0);
 
-  frontStrip.begin();
-  backStrip.begin();
-
-  frontStrip.show();
-  backStrip.show();
+  lights.startupAnimation();
 }
 
 void loop()

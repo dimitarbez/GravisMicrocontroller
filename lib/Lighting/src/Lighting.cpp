@@ -72,6 +72,57 @@ void Lighting::restoreOriginalColors()
   backStrip.show();
 }
 
+void Lighting::startupAnimation()
+{
+  // Light blue color
+  int r = 100, g = 70, b = 255;
+
+  // Chase animation duration
+  const int chaseDuration = 1500; // 1.5 seconds
+  const int chaseDelay = chaseDuration / numOfPixels;
+
+  // Breathing animation duration
+  const int breatheDuration = 1500; // 1.5 seconds
+  const int halfBreatheDuration = breatheDuration / 2;
+
+  // Chase animation
+  for (int pixel = 0; pixel < numOfPixels; pixel++)
+  {
+    frontStrip.setPixelColor(pixel, r, g, b);
+    backStrip.setPixelColor(pixel, r, g, b);
+    frontStrip.show();
+    backStrip.show();
+    delay(chaseDelay);
+  }
+
+  // Breathing animation
+  for (int elapsed = 0; elapsed < breatheDuration; elapsed += 10)
+  {
+    delay(10); // Sleep for 10ms
+
+    float alpha;
+    if (elapsed <= halfBreatheDuration)
+    {
+      alpha = static_cast<float>(elapsed) / halfBreatheDuration; // Transition from 0 to 1 over 0.75 seconds
+    }
+    else
+    {
+      alpha = 1.0 - static_cast<float>(elapsed - halfBreatheDuration) / halfBreatheDuration; // Transition from 1 to 0 over 0.75 seconds
+    }
+
+    // Calculate the intensity based on alpha
+    int currentR = r * alpha;
+    int currentG = g * alpha;
+    int currentB = b * alpha;
+
+    setStripColor(frontStrip, currentR, currentG, currentB);
+    setStripColor(backStrip, currentR, currentG, currentB);
+  }
+
+  setStripColor(frontStrip, 0, 0, 0);
+  setStripColor(backStrip, 0, 0, 0);
+}
+
 void Lighting::control(String buffer)
 {
   int separatorIndex = buffer.indexOf(":");
@@ -275,8 +326,8 @@ void Lighting::update()
         frontStrip.clear();
         backStrip.clear();
 
-        const int gap = 3;        // Distance between blue and red lights
-        const int chaseWidth = 4; // Number of consecutive blue or red pixels
+        const int gap = 8;        // Distance between blue and red lights
+        const int chaseWidth = 3; // Number of consecutive blue or red pixels
         for (int i = 0; i < chaseWidth; i++)
         {
           if (chaseIndex + i < numOfPixels)

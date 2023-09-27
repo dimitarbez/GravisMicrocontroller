@@ -30,5 +30,6 @@ private:
 public:
     Lighting(int frontStripPin, int backStripPin, int numOfPixels = 20);
     void control(String buffer);
+    void startupAnimation();
     void update();
 };
