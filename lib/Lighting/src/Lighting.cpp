@@ -279,7 +279,7 @@ void Lighting::update()
     }
     break;
   case POLICE_ANIMATION:
-    interval = 60; // Increased the speed for a more aggressive look
+    interval = 60; // Speed for the flashing logic
     if (currentMillis - previousMillis >= interval)
     {
       previousMillis = currentMillis;
@@ -289,7 +289,8 @@ void Lighting::update()
       static uint8_t cycleCount = 0;
       static uint8_t flashCount = 0;
       static bool isBlue = true;
-      static int chaseIndex = 0;
+      static int fillIndex = 0;
+      static uint8_t fillCount = 0; // To keep track of the fill cycles (blue, red, blue, red)
 
       if (cycleCount < maxCycles)
       {
@@ -322,32 +323,33 @@ void Lighting::update()
       }
       else
       {
-        // Enhanced chase logic
+        // Modified filling logic from the edges towards the center
         frontStrip.clear();
         backStrip.clear();
 
-        const int gap = 8;        // Distance between blue and red lights
-        const int chaseWidth = 3; // Number of consecutive blue or red pixels
-        for (int i = 0; i < chaseWidth; i++)
+        uint32_t color = isBlue ? frontStrip.Color(0, 0, 255) : frontStrip.Color(255, 0, 0);
+        for (int i = 0; i <= fillIndex; i++)
         {
-          if (chaseIndex + i < numOfPixels)
-          {
-            frontStrip.setPixelColor(chaseIndex + i, 0, 0, 255);
-            backStrip.setPixelColor(chaseIndex + i, 0, 0, 255);
-          }
+          frontStrip.setPixelColor(i, color); // Fill from left
+          backStrip.setPixelColor(i, color);
 
-          if (chaseIndex - gap + i >= 0)
-          {
-            frontStrip.setPixelColor(chaseIndex - gap + i, 255, 0, 0);
-            backStrip.setPixelColor(chaseIndex - gap + i, 255, 0, 0);
-          }
+          frontStrip.setPixelColor(numOfPixels - 1 - i, color); // Fill from right
+          backStrip.setPixelColor(numOfPixels - 1 - i, color);
         }
 
-        chaseIndex += chaseWidth;
-        if (chaseIndex >= numOfPixels + gap) // Making sure the chase goes beyond the strip for full clear
+        fillIndex += 3; // Increasing fill speed by filling two pixels at a time
+
+        if (fillIndex > numOfPixels / 2) // Met in the center
         {
-          chaseIndex = 0;
-          cycleCount = 0; // Reset to go back to flashing after one full chase
+          fillIndex = 0;
+          isBlue = !isBlue; // Toggle between blue and red
+          fillCount++;
+
+          if (fillCount >= 4) // After completing the cycle (blue, red, blue, red)
+          {
+            fillCount = 0;
+            cycleCount = 0; // Reset to go back to flashing
+          }
         }
       }
 
