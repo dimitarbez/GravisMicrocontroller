@@ -74,6 +74,16 @@ Note: Be mindful of the serial buffer limits. If sending multiple commands in ra
   - Command: `motor:speed:[x]`
   - Description: Sets the speed of the motor. Replace `[x]` with the desired speed value.
 
+### Telemetry Data
+
+- **Baterry Voltage**
+  - Command: `read:battery`
+  - Description: prints the battery voltage
+
+- **DHT 22 Data**
+  - Command: `read:dht`
+  - Description: prints the humidity and the temperature in celsius
+
 ### Servo Commands
 
 - **Camera Pitch**:
