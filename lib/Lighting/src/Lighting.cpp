@@ -210,7 +210,7 @@ void Lighting::update()
 
   switch (currentState)
   {
-  case BLINK_LEFT:
+  case BLINK_RIGHT:
     if (currentMillis - previousMillis >= interval)
     {
       previousMillis = currentMillis;
@@ -233,7 +233,7 @@ void Lighting::update()
       backStrip.show();
     }
     break;
-  case BLINK_RIGHT:
+  case BLINK_LEFT:
     if (currentMillis - previousMillis >= interval)
     {
       previousMillis = currentMillis;
