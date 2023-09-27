@@ -11,6 +11,12 @@ Lighting::Lighting(int frontStripPin, int backStripPin, int numOfPixels)
   frontStrip.clear();
   backStrip.begin();
   backStrip.clear();
+
+  for (size_t i = 0; i < numOfPixels; i++)
+  {
+    originalColorsFront[i] = 0x000000; // Black color in RGB
+    originalColorsBack[i] = 0x000000;  // Black color in RGB
+  }
 }
 
 void Lighting::setStripColor(Adafruit_NeoPixel &strip, int r, int g, int b)
@@ -32,11 +38,47 @@ void Lighting::parseRGB(String &input, int &r, int &g, int &b)
   b = input.toInt();
 }
 
+void Lighting::saveOriginalColors()
+{
+  // Save original colors for the front strip
+  for (size_t i = 0; i < 20; i++)
+  {
+    originalColorsFront[i] = frontStrip.getPixelColor(i);
+  }
+
+  // Save original colors for the back strip
+  for (size_t i = 0; i < 20; i++)
+  {
+    originalColorsBack[i] = backStrip.getPixelColor(i);
+  }
+}
+
+void Lighting::restoreOriginalColors()
+{
+  // Restore original colors for the front strip
+  for (size_t i = 0; i < 20; i++)
+  {
+    frontStrip.setPixelColor(i, originalColorsFront[i]);
+  }
+
+  // Restore original colors for the back strip
+  for (size_t i = 0; i < 20; i++)
+  {
+    backStrip.setPixelColor(i, originalColorsBack[i]);
+  }
+
+  // Update the strips to reflect the changes
+  frontStrip.show();
+  backStrip.show();
+}
+
 void Lighting::control(String buffer)
 {
   int separatorIndex = buffer.indexOf(":");
   String commandType = buffer.substring(0, separatorIndex);
   String command = buffer.substring(separatorIndex + 1);
+
+  Serial.println(buffer);
 
   if (commandType == "lights")
   {
@@ -46,6 +88,7 @@ void Lighting::control(String buffer)
       int r, g, b;
       parseRGB(command, r, g, b);
       setStripColor(frontStrip, r, g, b);
+      setState(State::NONE);
     }
     else if (command.startsWith("back:"))
     {
@@ -53,6 +96,7 @@ void Lighting::control(String buffer)
       int r, g, b;
       parseRGB(command, r, g, b);
       setStripColor(backStrip, r, g, b);
+      setState(State::NONE);
     }
     else if (command.startsWith("all:"))
     {
@@ -61,6 +105,7 @@ void Lighting::control(String buffer)
       parseRGB(command, r, g, b);
       setStripColor(frontStrip, r, g, b);
       setStripColor(backStrip, r, g, b);
+      setState(State::NONE);
     }
     else if (command.startsWith("animation:"))
     {
@@ -68,22 +113,27 @@ void Lighting::control(String buffer)
 
       if (command == "off")
       {
+        restoreOriginalColors();
         setState(NONE); // Turn off animations
       }
       else if (command == "blink_left")
       {
+        saveOriginalColors();
         setState(BLINK_LEFT);
       }
       else if (command == "blink_right")
       {
+        saveOriginalColors();
         setState(BLINK_RIGHT);
       }
       else if (command == "blink_all")
       {
+        saveOriginalColors();
         setState(BLINK_ALL);
       }
       else if (command == "police")
       {
+        saveOriginalColors();
         setState(POLICE_ANIMATION);
       }
     }
@@ -98,7 +148,12 @@ void Lighting::setState(State newState)
 void Lighting::update()
 {
   static unsigned long previousMillis = 0; // stores the last time the LED was updated
-  const long interval = 500;               // interval at which to blink (milliseconds)
+  long interval = 500;                     // interval at which to blink (milliseconds)
+  const uint8_t BLINK_R = 255;
+  const uint8_t BLINK_G = 50;
+  const uint8_t BLINK_B = 0;
+
+  const size_t BLINK_SIZE = numOfPixels / 4; // Number of pixels for each blinker
 
   unsigned long currentMillis = millis();
 
@@ -108,22 +163,20 @@ void Lighting::update()
     if (currentMillis - previousMillis >= interval)
     {
       previousMillis = currentMillis;
+
       if (blinkState)
       {
-        for (size_t i = 0; i < numOfPixels / 2; i++)
+        for (size_t i = 0; i < BLINK_SIZE; i++)
         {
-          frontStrip.setPixelColor(i, 255, 255, 0); // yellow
-          backStrip.setPixelColor(i, 255, 255, 0);
+          frontStrip.setPixelColor(i, BLINK_R, BLINK_G, BLINK_B);
+          backStrip.setPixelColor(i, BLINK_R, BLINK_G, BLINK_B);
         }
       }
       else
       {
-        for (size_t i = 0; i < numOfPixels / 2; i++)
-        {
-          frontStrip.setPixelColor(i, 0, 0, 0); // off
-          backStrip.setPixelColor(i, 0, 0, 0);
-        }
+        restoreOriginalColors();
       }
+
       blinkState = !blinkState;
       frontStrip.show();
       backStrip.show();
@@ -135,19 +188,15 @@ void Lighting::update()
       previousMillis = currentMillis;
       if (blinkState)
       {
-        for (size_t i = numOfPixels / 2; i < numOfPixels; i++)
+        for (size_t i = numOfPixels - BLINK_SIZE; i < numOfPixels; i++) // Starts from the last quarter of the strip
         {
-          frontStrip.setPixelColor(i, 255, 255, 0); // yellow
-          backStrip.setPixelColor(i, 255, 255, 0);
+          frontStrip.setPixelColor(i, BLINK_R, BLINK_G, BLINK_B);
+          backStrip.setPixelColor(i, BLINK_R, BLINK_G, BLINK_B);
         }
       }
       else
       {
-        for (size_t i = numOfPixels / 2; i < numOfPixels; i++)
-        {
-          frontStrip.setPixelColor(i, 0, 0, 0); // off
-          backStrip.setPixelColor(i, 0, 0, 0);
-        }
+        restoreOriginalColors();
       }
       blinkState = !blinkState;
       frontStrip.show();
@@ -155,10 +204,106 @@ void Lighting::update()
     }
     break;
   case BLINK_ALL:
-    // Your logic to handle blink all animation
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis;
+
+      if (blinkState)
+      {
+        for (size_t i = 0; i < numOfPixels; i++)
+        {
+          // Set to orange color for all pixels
+          frontStrip.setPixelColor(i, BLINK_R, BLINK_G, BLINK_B);
+          backStrip.setPixelColor(i, BLINK_R, BLINK_G, BLINK_B);
+        }
+      }
+      else
+      {
+        restoreOriginalColors();
+      }
+
+      blinkState = !blinkState;
+      frontStrip.show();
+      backStrip.show();
+    }
     break;
   case POLICE_ANIMATION:
-    // Your logic to handle police animation
+    interval = 60; // Increased the speed for a more aggressive look
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis;
+
+      const uint8_t flashes = 3;
+      const uint8_t maxCycles = 10;
+      static uint8_t cycleCount = 0;
+      static uint8_t flashCount = 0;
+      static bool isBlue = true;
+      static int chaseIndex = 0;
+
+      if (cycleCount < maxCycles)
+      {
+        // Flashing logic
+        if (blinkState)
+        {
+          size_t startPixel = isBlue ? 0 : numOfPixels / 2;
+          size_t endPixel = isBlue ? numOfPixels / 2 : numOfPixels;
+          uint32_t color = isBlue ? frontStrip.Color(0, 0, 255) : frontStrip.Color(255, 0, 0);
+
+          for (size_t i = startPixel; i < endPixel; i++)
+          {
+            frontStrip.setPixelColor(i, color);
+            backStrip.setPixelColor(i, color);
+          }
+        }
+        else
+        {
+          frontStrip.clear();
+          backStrip.clear();
+          flashCount++;
+
+          if (flashCount >= flashes)
+          {
+            isBlue = !isBlue;
+            flashCount = 0;
+            cycleCount++;
+          }
+        }
+      }
+      else
+      {
+        // Enhanced chase logic
+        frontStrip.clear();
+        backStrip.clear();
+
+        const int gap = 3;        // Distance between blue and red lights
+        const int chaseWidth = 4; // Number of consecutive blue or red pixels
+        for (int i = 0; i < chaseWidth; i++)
+        {
+          if (chaseIndex + i < numOfPixels)
+          {
+            frontStrip.setPixelColor(chaseIndex + i, 0, 0, 255);
+            backStrip.setPixelColor(chaseIndex + i, 0, 0, 255);
+          }
+
+          if (chaseIndex - gap + i >= 0)
+          {
+            frontStrip.setPixelColor(chaseIndex - gap + i, 255, 0, 0);
+            backStrip.setPixelColor(chaseIndex - gap + i, 255, 0, 0);
+          }
+        }
+
+        chaseIndex += chaseWidth;
+        if (chaseIndex >= numOfPixels + gap) // Making sure the chase goes beyond the strip for full clear
+        {
+          chaseIndex = 0;
+          cycleCount = 0; // Reset to go back to flashing after one full chase
+        }
+      }
+
+      blinkState = !blinkState;
+      frontStrip.show();
+      backStrip.show();
+    }
     break;
   case NONE:
   default:
