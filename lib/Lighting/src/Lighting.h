@@ -32,4 +32,5 @@ public:
     void control(String buffer);
     void startupAnimation();
     void update();
+    void playLowBatteryAnimationIndefinitely();
 };

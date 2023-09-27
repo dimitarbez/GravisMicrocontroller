@@ -72,6 +72,43 @@ void Lighting::restoreOriginalColors()
   backStrip.show();
 }
 
+void Lighting::playLowBatteryAnimationIndefinitely()
+{
+  while (true)
+  {
+    static unsigned long previousMillis = 0;
+    const long interval = 500; // 500ms or 0.5 second for a blink frequency of 2Hz
+    const uint8_t BATTERY_LOW_R = 255;
+    const uint8_t BATTERY_LOW_G = 0;
+    const uint8_t BATTERY_LOW_B = 0;
+
+    unsigned long currentMillis = millis();
+
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis;
+
+      if (blinkState)
+      {
+        for (size_t i = 0; i < numOfPixels; i++)
+        {
+          frontStrip.setPixelColor(i, BATTERY_LOW_R, BATTERY_LOW_G, BATTERY_LOW_B);
+          backStrip.setPixelColor(i, BATTERY_LOW_R, BATTERY_LOW_G, BATTERY_LOW_B);
+        }
+      }
+      else
+      {
+        frontStrip.clear();
+        backStrip.clear();
+      }
+
+      blinkState = !blinkState;
+      frontStrip.show();
+      backStrip.show();
+    }
+  }
+}
+
 void Lighting::startupAnimation()
 {
   // Light blue color

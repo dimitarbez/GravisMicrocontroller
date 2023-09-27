@@ -32,6 +32,8 @@ namespace Pins
 
   constexpr int CAM_YAW_SERVO = 2;
   constexpr int CAM_PITCH_SERVO = 3;
+
+  constexpr int BATTERY_PIN = A15;
 }
 
 L298N rearMotors(Pins::REAR_ENB, Pins::REAR_IN2, Pins::REAR_IN1, Pins::REAR_ENA, Pins::REAR_IN4, Pins::REAR_IN3);
@@ -42,6 +44,33 @@ CustomServo camPitchServo, camYawServo;
 Lighting lights = Lighting(Pins::LED_STRIP_FRONT, Pins::LED_STRIP_BACK);
 
 DHT dht(Pins::DHTPIN, DHTTYPE);
+
+int batteryChecks = 0;
+
+void printBatteryVoltage()
+{
+  int analogValue = analogRead(Pins::BATTERY_PIN);
+  float voltage = (analogValue / 1023.0) * 5.0; // Convert analog reading to voltage (0-5V)
+
+  Serial.println(voltage);
+
+  const float R1 = 20000;
+  const float R2 = 10000;
+
+  // Adjust the voltage based on your voltage divider
+  float batteryVoltage = voltage / (R2 / (R1 + R2));
+
+  Serial.print("Battery Voltage: ");
+  Serial.println(batteryVoltage);
+}
+
+bool isBatteryVoltageLow()
+{
+  int analogValue = analogRead(Pins::BATTERY_PIN);
+  float voltage = (analogValue / 1023.0) * 5.0; // Convert analog reading to voltage (0-5V)
+
+  return (voltage < 3.4);
+}
 
 void handleDHT22()
 {
@@ -149,6 +178,19 @@ void setup()
 
 void loop()
 {
+  if (batteryChecks++ > 200)
+  {
+    if (isBatteryVoltageLow())
+    {
+      Serial.println("BATTERY_LOW");
+      printBatteryVoltage();
+      rearMotors.stopMotors();
+      frontMotors.stopMotors();
+      lights.playLowBatteryAnimationIndefinitely();
+    }
+    batteryChecks = 0;
+  }
+
   if (Serial.available() > 0)
   {
     String buffer = Serial.readStringUntil('\n');
@@ -164,9 +206,13 @@ void loop()
     {
       lights.control(buffer);
     }
-    else if (buffer.startsWith("dht:read"))
+    else if (buffer.startsWith("read:dht"))
     {
       handleDHT22();
+    }
+    else if (buffer.startsWith("read:battery"))
+    {
+      printBatteryVoltage();
     }
   }
 
