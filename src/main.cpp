@@ -16,19 +16,19 @@ namespace Pins
   constexpr int LED_STRIP_BACK = 7;
   constexpr int DHTPIN = 25;
 
-  constexpr int REAR_ENA = 29;
+  constexpr int REAR_ENA = 9;
   constexpr int REAR_IN1 = 31;
   constexpr int REAR_IN2 = 33;
   constexpr int REAR_IN3 = 35;
   constexpr int REAR_IN4 = 37;
-  constexpr int REAR_ENB = 39;
+  constexpr int REAR_ENB = 10;
 
-  constexpr int FRONT_ENA = 28;
+  constexpr int FRONT_ENA = 11;
   constexpr int FRONT_IN1 = 30;
   constexpr int FRONT_IN2 = 32;
   constexpr int FRONT_IN3 = 34;
   constexpr int FRONT_IN4 = 36;
-  constexpr int FRONT_ENB = 38;
+  constexpr int FRONT_ENB = 12;
 
   constexpr int CAM_YAW_SERVO = 2;
   constexpr int CAM_PITCH_SERVO = 3;
