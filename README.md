@@ -4,7 +4,7 @@ This repository contains the PlatformIO project for the microcontroller firmware
 
 ## Overview
 
-Gravis is a pioneering modular robotic platform engineered with versatility at its core. Purpose-built for education, research, and development, Gravis bridges the gap between theoretical understanding and hands-on experimentation. The firmware, designed for Arduino, ensures intuitive and detailed control, facilitating seamless interactions between an array of hardware components. From advanced sensor integrations to nuanced actuations, Gravis's firmware guarantees real-time responses, making it an indispensable tool for learners, researchers, and developers alike. Dive into the future of robotics with Gravis, where innovation meets hands-on application.
+Gravis is a pioneering modular robotic platform engineered with versatility at its core. Purpose-built for education, research, and development, Gravis bridges the gap between theoretical understanding and hands-on experimentation. The firmware, designed for Arduino, communicates with a Raspberry Pi via serial, ensuring intuitive and detailed control, and facilitating seamless interactions between an array of hardware components. From advanced sensor integrations to nuanced actuations, Gravis's firmware guarantees real-time responses, making it an indispensable tool for learners, researchers, and developers alike. Dive into the future of robotics with Gravis, where innovation meets hands-on application.
 
 ## Installation and Setup
 
