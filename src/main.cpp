@@ -8,6 +8,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <Lighting.h>
 
+#define DHTTYPE DHT22 // DHT22 sensor
+
 namespace Pins
 {
   constexpr int LED_STRIP_FRONT = 8;
@@ -39,6 +41,28 @@ CustomServo camPitchServo, camYawServo;
 
 Lighting lights = Lighting(Pins::LED_STRIP_FRONT, Pins::LED_STRIP_BACK);
 
+DHT dht(Pins::DHTPIN, DHTTYPE);
+
+void handleDHT22()
+{
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  // Check if any readings failed and exit early (to try again).
+  if (isnan(humidity) || isnan(temperature))
+  {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+  Serial.print("humidity:");
+  Serial.print(humidity);
+  Serial.print("%|");
+  Serial.print("temperature:");
+  Serial.print(temperature);
+  Serial.println("c");
+}
+
 void servoControl(String buffer)
 {
   int separatorIndex = buffer.indexOf(":");
@@ -53,12 +77,12 @@ void servoControl(String buffer)
 
   if (command == "cam_pitch")
   {
-    Serial.println("ACK SERVO");
+    Serial.println("ACK");
     camPitchServo.ChangeServoAngleLinear(angle);
   }
   else if (command == "cam_yaw")
   {
-    Serial.println("ACK SERVO");
+    Serial.println("ACK");
     camYawServo.ChangeServoAngleLinear(angle);
   }
 }
@@ -118,6 +142,8 @@ void setup()
   camPitchServo.Setup(Pins::CAM_PITCH_SERVO, 90.0);
   camYawServo.Setup(Pins::CAM_YAW_SERVO, 90.0);
 
+  dht.begin();
+
   lights.startupAnimation();
 }
 
@@ -137,6 +163,10 @@ void loop()
     else if (buffer.startsWith("lights"))
     {
       lights.control(buffer);
+    }
+    else if (buffer.startsWith("dht:read"))
+    {
+      handleDHT22();
     }
   }
 
