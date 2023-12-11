@@ -69,7 +69,7 @@ bool isBatteryVoltageLow()
   int analogValue = analogRead(Pins::BATTERY_PIN);
   float voltage = (analogValue / 1023.0) * 5.0; // Convert analog reading to voltage (0-5V)
 
-  return (voltage < 3.4);
+  return (voltage < 3.2);
 }
 
 void handleDHT22()
@@ -178,7 +178,7 @@ void setup()
 
 void loop()
 {
-  if (batteryChecks++ > 200)
+  if (batteryChecks++ > 2000)
   {
     if (isBatteryVoltageLow())
     {
