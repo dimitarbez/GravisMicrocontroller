@@ -105,7 +105,7 @@ Note: Be mindful of the serial buffer limits. If sending multiple commands in ra
   - Description: Sets the RGB values for the back strip. Replace `[r]`, `[g]`, and `[b]` with the desired red, green, and blue values respectively.
 
 - **Turn Off Both Strips**:
-  - Command: `lights:off`
+  - Command: `lights:animation:off`
   - Description: Turns off both the front and back strips, setting their colors to black (0,0,0).
 
 - **Blink Left Animation**:
